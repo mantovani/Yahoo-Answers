@@ -52,10 +52,9 @@ has 'region' => (
     isa       => 'rw',
     isa       => 'Region',
     predicate => 'has_region',
-    trigger   => \&_region_by_name
 );
 
-sub _region_by_name {
+sub region_by_name {
     my ( $self, $region ) = @_;
     my %country = (
         'united states'  => 'us',
@@ -75,8 +74,8 @@ sub _region_by_name {
     );
 
     if ( length($region) > 2 ) {
-        $self->region( $country{ lc($region) }
-              || die "There is no region with the name: {$region}" );
+        $self->{region} = $country{ lc($region) }
+          || die "There is no region with the name: {$region}";
     }
 }
 
@@ -159,7 +158,6 @@ before 'request' => sub { shift->url_builder };
 sub request {
     my $self = shift;
     $self->mechanize->get( $self->url );
-    print $self->url, "\n";
     return $self->mechanize->content;
 }
 
@@ -185,21 +183,20 @@ Perhaps a little code snippet.
 	use Data::Dumper;
 
     my $ya = Yahoo::Answers->new(
-        query      => 'teste',
-        results    => 50,
-        sort       => 'date_desc',
-        region     => 'br',
-        date_range => '90-130',
+        query   => 'teste',
+        results => 50,
+        sort    => 'date_desc',
         appid =>
 '9J_NabHV34Fuzb1qIdxpKfQdBmV6eaMGeva5NESfQ7IDCupidoKd_cSGK7MI5Xvl.eLeQKd9YkPOU0M4DsX73A--'
     );
 
+    $ya->region_by_name('Brazil');
     my $struct = $ya->get_search;
     if ( $ya->has_error ) {
-
+        
         die( Dumper $ya->error );
-
-    } 
+    
+    }
     else {
         
         print Dumper $struct;
