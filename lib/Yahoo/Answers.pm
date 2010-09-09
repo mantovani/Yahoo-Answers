@@ -30,8 +30,7 @@ has 'url' => (
 
 has 'query' => ( is => 'rw', isa => 'Str', required => 1 );
 
-subtype 'Search_in' => as Str =>
-  where { /^all$|^question$|^best_answer$/ };
+subtype 'Search_in' => as Str => where { /^all$|^question$|^best_answer$/ };
 has 'search_in' => (
     is        => 'rw',
     isa       => 'Search_in',
@@ -81,8 +80,7 @@ sub _region_by_name {
     }
 }
 
-subtype 'Date_Range' => as Str =>
-  where { /all|\d|\d\-\d|more\d/ };
+subtype 'Date_Range' => as Str => where { /all|\d|\d\-\d|more\d/ };
 has 'date_range' => (
     is        => 'rw',
     isa       => 'Date_Range',
@@ -91,8 +89,7 @@ has 'date_range' => (
     predicate => 'has_date_range'
 );
 
-subtype 'Sort' => as Str =>
-  where { /relevance|date_desc|date_asc/ };
+subtype 'Sort' => as Str => where { /relevance|date_desc|date_asc/ };
 has 'sort' => (
     is        => 'rw',
     isa       => 'Sort',
@@ -135,9 +132,26 @@ sub url_builder {
 }
 
 sub get_search {
-    my $self = shift;
-    my $json = JSON->new->allow_nonref;
-    return $json->decode( $self->request );
+    my $self    = shift;
+    my $json    = JSON->new->allow_nonref;
+    my $content = $json->decode( $self->request );
+    $self->check_error($content);
+    return $content;
+}
+
+has 'error' => (
+    is        => 'rw',
+    isa       => 'HashRef',
+    predicate => 'has_error',
+    weak_ref  => 1
+);
+
+sub check_error {
+    my ( $self, $content ) = @_;
+    if ( my $error = $content->{'Error'} ) {
+        $self->error($error);
+    }
+    return 1;
 }
 
 before 'request' => sub { shift->url_builder };
@@ -145,6 +159,7 @@ before 'request' => sub { shift->url_builder };
 sub request {
     my $self = shift;
     $self->mechanize->get( $self->url );
+    print $self->url, "\n";
     return $self->mechanize->content;
 }
 
@@ -167,16 +182,31 @@ Quick summary of what the module does.
 Perhaps a little code snippet.
 
     use Yahoo::Answers;
+	use Data::Dumper;
 
     my $ya = Yahoo::Answers->new(
-        query => 'test',
+        query      => 'teste',
+        results    => 50,
+        sort       => 'date_desc',
+        region     => 'br',
+        date_range => '90-130',
         appid =>
 '9J_NabHV34Fuzb1qIdxpKfQdBmV6eaMGeva5NESfQ7IDCupidoKd_cSGK7MI5Xvl.eLeQKd9YkPOU0M4DsX73A--'
     );
 
     my $struct = $ya->get_search;
-    use Data::Dumper;
-    print Dumper $struct;
+    if ( $ya->has_error ) {
+
+        die( Dumper $ya->error );
+
+    } 
+    else {
+        
+        print Dumper $struct;
+    
+    }
+
+
 
 =head1 AUTHOR
 
