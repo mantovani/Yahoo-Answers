@@ -6,7 +6,6 @@ use strict;
 use Moose;
 use Moose::Util::TypeConstraints;
 
-use MooseX::Method::Signatures;
 use MooseX::Types::Common::String qw/NonEmptySimpleStr SimpleStr/;
 use MooseX::Types::Common::Numeric qw/PositiveInt/;
 
@@ -31,7 +30,7 @@ has 'url' => (
 
 has 'query' => ( is => 'rw', isa => 'Str', required => 1 );
 
-subtype 'Search_in' => as NonEmptySimpleStr =>
+subtype 'Search_in' => as Str =>
   where { /^all$|^question$|^best_answer$/ };
 has 'search_in' => (
     is        => 'rw',
@@ -47,7 +46,7 @@ has 'category_id' =>
 has 'category_name' =>
   ( is => 'rw', isa => SimpleStr, predicate => 'has_category_name' );
 
-subtype 'Region' => as NonEmptySimpleStr => where {
+subtype 'Region' => as Str => where {
     /^us$|^uk$|^ca$|^au$|^in$|^es$|^br$|^ar$|^mx$|^e1$|^it$|^de$|^fr$|^sg$/x;
 };
 has 'region' => (
@@ -82,7 +81,7 @@ sub _region_by_name {
     }
 }
 
-subtype 'Date_Range' => as NonEmptySimpleStr =>
+subtype 'Date_Range' => as Str =>
   where { /all|\d|\d\-\d|more\d/ };
 has 'date_range' => (
     is        => 'rw',
@@ -92,7 +91,7 @@ has 'date_range' => (
     predicate => 'has_date_range'
 );
 
-subtype 'Sort' => as NonEmptySimpleStr =>
+subtype 'Sort' => as Str =>
   where { /relevance|date_desc|date_asc/ };
 has 'sort' => (
     is        => 'rw',
@@ -112,21 +111,23 @@ has 'appid' => (
     predicate => 'has_appid'
 );
 
-subtype 'Type_',
-  as NonEmptySimpleStr => where { /^all$|^resolved$|^open$|^undecided$/ };
-has 'type_' => ( is => 'rw', isa => 'Type_', predicate => 'has_type' );
+subtype 'Search_Type',
+  as Str => where { /^all$|^resolved$|^open$|^undecided$/ };
+has 'search_type' => ( is => 'rw', isa => 'Type_', predicate => 'has_type' );
 
 has 'start' => ( is => 'rw', isa => PositiveInt, predicate => 'has_start' );
 
-subtype 'Results' => as PositiveInt => where { $_[0] <= 50 };
+subtype Results => as Int => where { $_[0] <= 50 };
 has 'results' => ( is => 'rw', isa => 'Results', predicate => 'has_results' );
 
 has 'output' => ( is => 'ro', isa => NonEmptySimpleStr, default => 'json' );
 
-sub mount_url {
+sub url_builder {
     my $self = shift;
     for my $acr (
-        qw/query search_in category_id category_name region date_range sort appid type start results output/
+        'query',       'search_in',  'category_id', 'category_name',
+        'region',      'date_range', 'sort',        'appid',
+        'search_type', 'start',      'results',     'output'
       )
     {
         $self->url->query_param( $acr => $self->{$acr} ) if $self->{$acr};
@@ -139,7 +140,7 @@ sub get_search {
     return $json->decode( $self->request );
 }
 
-before 'request' => sub { shift->mount_url };
+before 'request' => sub { shift->url_builder };
 
 sub request {
     my $self = shift;
@@ -222,6 +223,7 @@ L<http://search.cpan.org/dist/Yahoo-Answers/>
 
 =head1 ACKNOWLEDGEMENTS
 
+Thiago Rondon
 
 =head1 LICENSE AND COPYRIGHT
 
