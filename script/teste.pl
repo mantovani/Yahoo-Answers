@@ -5,7 +5,7 @@ use warnings;
 
 {
     my $ya = Yahoo::Answers->new(
-        query   => 'teste',
+        query   => 'cultura inglesa',
         results => 50,
         sort    => 'date_desc',
         appid =>

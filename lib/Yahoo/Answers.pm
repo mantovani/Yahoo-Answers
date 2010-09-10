@@ -1,5 +1,45 @@
 package Yahoo::Answers;
 
+=head1 NAME
+
+Yahoo::Answers - The great new Yahoo::Answers!
+
+=head1 VERSION
+
+Version 0.01
+
+=cut
+
+our $VERSION = '0.02';
+
+=head1 SYNOPSIS
+
+Quick summary of what the module does.
+
+Perhaps a little code snippet.
+
+    use Yahoo::Answers;
+	use Data::Dumper;
+
+    my $ya = Yahoo::Answers->new(
+        query   => 'teste',
+        results => 50,
+        sort    => 'date_desc',
+        appid =>
+'9J_NabHV34Fuzb1qIdxpKfQdBmV6eaMGeva5NESfQ7IDCupidoKd_cSGK7MI5Xvl.eLeQKd9YkPOU0M4DsX73A--'
+    );
+
+    $ya->region_by_name('Brazil');
+    my $struct = $ya->get_search;
+    if ( $ya->has_error ) {
+        die( Dumper $ya->error );
+    }
+    else {
+        print Dumper $struct;
+    }
+
+=cut
+
 use warnings;
 use strict;
 
@@ -28,7 +68,7 @@ has 'url' => (
     }
 );
 
-has 'query' => ( is => 'rw', isa => 'Str', required => 1 );
+has 'query' => ( is => 'rw', isa => 'Str', required => 0 );
 
 subtype 'Search_in' => as Str => where { /^all$|^question$|^best_answer$/ };
 has 'search_in' => (
@@ -97,7 +137,7 @@ has 'sort' => (
     predicate => 'has_sort'
 );
 
-# You can see more information here,
+# You can see more information at,
 # http://developer.yahoo.com/faq/index.html#appid
 
 has 'appid' => (
@@ -118,6 +158,13 @@ has 'results' => ( is => 'rw', isa => 'Results', predicate => 'has_results' );
 
 has 'output' => ( is => 'ro', isa => NonEmptySimpleStr, default => 'json' );
 
+=head2 url_builder
+
+Build the url to do the get with all args that you pass
+for the attributes.
+
+=cut
+
 sub url_builder {
     my $self = shift;
     for my $acr (
@@ -130,9 +177,19 @@ sub url_builder {
     }
 }
 
+=head2 get_search
+
+Make the search, and decode the JSON, if don't have the attribute
+"query", it return nothing.
+
+=cut
+
 sub get_search {
-    my $self    = shift;
-    my $json    = JSON->new->allow_nonref;
+    my $self = shift;
+    my $json = JSON->new->allow_nonref;
+
+    # if haven't "query" to search.
+    return unless $self->has_query;
     my $content = $json->decode( $self->request );
     $self->check_error($content);
     return $content;
@@ -145,65 +202,37 @@ has 'error' => (
     weak_ref  => 1
 );
 
+=head2 check_error
+
+If have any error with your search, it sets the attribute error,
+so you can see the error and check for errors.
+
+=cut
+
 sub check_error {
     my ( $self, $content ) = @_;
     if ( my $error = $content->{'Error'} ) {
         $self->error($error);
     }
+
+    # - Clear the query
+    $self->query(0);
     return 1;
 }
 
 before 'request' => sub { shift->url_builder };
+
+=head2 request
+
+Do the quest, and return the content.
+
+=cut
 
 sub request {
     my $self = shift;
     $self->mechanize->get( $self->url );
     return $self->mechanize->content;
 }
-
-=head1 NAME
-
-Yahoo::Answers - The great new Yahoo::Answers!
-
-=head1 VERSION
-
-Version 0.01
-
-=cut
-
-our $VERSION = '0.01';
-
-=head1 SYNOPSIS
-
-Quick summary of what the module does.
-
-Perhaps a little code snippet.
-
-    use Yahoo::Answers;
-	use Data::Dumper;
-
-    my $ya = Yahoo::Answers->new(
-        query   => 'teste',
-        results => 50,
-        sort    => 'date_desc',
-        appid =>
-'9J_NabHV34Fuzb1qIdxpKfQdBmV6eaMGeva5NESfQ7IDCupidoKd_cSGK7MI5Xvl.eLeQKd9YkPOU0M4DsX73A--'
-    );
-
-    $ya->region_by_name('Brazil');
-    my $struct = $ya->get_search;
-    if ( $ya->has_error ) {
-        
-        die( Dumper $ya->error );
-    
-    }
-    else {
-        
-        print Dumper $struct;
-    
-    }
-
-
 
 =head1 AUTHOR
 
