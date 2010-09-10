@@ -320,7 +320,7 @@ Thiago Rondon
 
 =head1 LICENSE AND COPYRIGHT
 
-Copyright 2010 Daniel de O. Mantovani.
+Copyright 2010 Aware (www.aware.com.br)
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of either: the GNU General Public License as published
