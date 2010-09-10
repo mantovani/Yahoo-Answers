@@ -1,2 +1,4 @@
 - write tests
 - write a better documentation
+- change Mechanize for something more fast(mechanize very slow to the job)
+- create a new class for the subtypes

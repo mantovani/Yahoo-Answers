@@ -10,7 +10,7 @@ Version 0.01
 
 =cut
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 =head1 SYNOPSIS
 
@@ -47,7 +47,7 @@ use Moose;
 use Moose::Util::TypeConstraints;
 
 use MooseX::Types::Common::String qw/NonEmptySimpleStr SimpleStr/;
-use MooseX::Types::Common::Numeric qw/PositiveInt/;
+use MooseX::Types::Common::Numeric qw/PositiveInt SingleDigit/;
 
 use WWW::Mechanize;
 use URI::QueryParam;
@@ -57,8 +57,14 @@ use JSON;
 has 'mechanize' => (
     is      => 'ro',
     isa     => 'WWW::Mechanize',
-    default => sub { WWW::Mechanize->new() }
+    lazy    => 1,
+    default => sub {
+        my $self = shift;
+        WWW::Mechanize->new(
+            onerror => sub { $self->error("@_"), timeout => 120 } );
+    }
 );
+
 has 'url' => (
     is      => 'rw',
     isa     => 'Object',
@@ -68,7 +74,12 @@ has 'url' => (
     }
 );
 
-has 'query' => ( is => 'rw', isa => 'Str', required => 0 );
+has 'query' => (
+    is        => 'rw',
+    isa       => 'Str',
+    required  => 0,
+    predicate => 'has_query'
+);
 
 subtype 'Search_in' => as Str => where { /^all$|^question$|^best_answer$/ };
 has 'search_in' => (
@@ -94,6 +105,31 @@ has 'region' => (
     predicate => 'has_region',
 );
 
+=head2 region_by_name
+
+With this, you can pass the country name, not the "us,uk" you can
+literary write the country name. The countrys are available here:
+
+	United States
+	United kingdom
+	Canada
+	Australia
+	India
+	Spain
+	Brazil
+	Argentina
+	Mexico
+	Italy
+	Germany
+	France
+	Singapore
+
+you can also search for only results in espanol with,
+
+	En espanol
+
+=cut
+
 sub region_by_name {
     my ( $self, $region ) = @_;
     my %country = (
@@ -114,7 +150,7 @@ sub region_by_name {
     );
 
     if ( length($region) > 2 ) {
-        $self->{region} = $country{ lc($region) }
+        $self->{'region'} = $country{ lc($region) }
           || die "There is no region with the name: {$region}";
     }
 }
@@ -160,7 +196,7 @@ has 'output' => ( is => 'ro', isa => NonEmptySimpleStr, default => 'json' );
 
 =head2 url_builder
 
-Build the url to do the get with all args that you pass
+Build the URL to do the "get" with all arguments that you pass
 for the attributes.
 
 =cut
@@ -190,16 +226,18 @@ sub get_search {
 
     # if haven't "query" to search.
     return unless $self->has_query;
-    my $content = $json->decode( $self->request );
-    $self->check_error($content);
-    return $content;
+
+    if ( my $request = $self->request ) {
+        my $content = $json->decode($request);
+        $self->check_error($content);
+        return $content;
+    }
 }
 
 has 'error' => (
     is        => 'rw',
-    isa       => 'HashRef',
+    isa       => 'Str',
     predicate => 'has_error',
-    weak_ref  => 1
 );
 
 =head2 check_error
@@ -220,18 +258,20 @@ sub check_error {
     return 1;
 }
 
-before 'request' => sub { shift->url_builder };
-
 =head2 request
 
-Do the quest, and return the content.
+Do the request, and return the content.
 
 =cut
+
+before 'request' => sub { shift->url_builder };
 
 sub request {
     my $self = shift;
     $self->mechanize->get( $self->url );
-    return $self->mechanize->content;
+    $self->mechanize->success
+      ? return $self->mechanize->content
+      : return;
 }
 
 =head1 AUTHOR
