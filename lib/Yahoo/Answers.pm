@@ -40,9 +40,6 @@ Perhaps a little code snippet.
 
 =cut
 
-use warnings;
-use strict;
-
 use Moose;
 use Moose::Util::TypeConstraints;
 
